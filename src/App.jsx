@@ -5,7 +5,7 @@ import Results from './components/Results.jsx';
 import Methodology from './components/Methodology.jsx';
 import { BodyFitError, todayISO } from './lib/bmi.js';
 import { evaluateBMI } from './lib/evaluate.js';
-import { parseDecimal } from './lib/validation.js';
+import { normalizeHeight, parseDecimal } from './lib/validation.js';
 import { loadWHOTable } from './lib/whoData.js';
 import { ERROR_MESSAGES } from './lib/i18n.js';
 
@@ -36,7 +36,7 @@ export default function App() {
         {
           birthDate: values.birthDate,
           sex: values.sex,
-          heightCm: parseDecimal(values.height),
+          heightCm: normalizeHeight(values.height).cm,
           weightKg: parseDecimal(values.weight),
           measurement: values.measurement,
           referenceDate,
@@ -104,6 +104,23 @@ export default function App() {
 
       <footer className="footer">
         <div className="container footer__inner">
+          <div className="footer__brand">
+            <span>Ishlab chiquvchi</span>
+            <img
+              className="footer__logo footer__logo--light"
+              src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-light-theme.png`}
+              alt="AzbekDev — Software Solutions"
+              width="161"
+              height="40"
+            />
+            <img
+              className="footer__logo footer__logo--dark"
+              src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-dark-theme.png`}
+              alt="AzbekDev — Software Solutions"
+              width="161"
+              height="40"
+            />
+          </div>
           <p>
             <strong>Tibbiy ogohlantirish.</strong> BodyFit skrining vositasi bo'lib, tibbiy tashxis qo'ymaydi va davolanish
             tavsiya qilmaydi. Sog'lig'ingiz bo'yicha savollar uchun shifokorga murojaat qiling.

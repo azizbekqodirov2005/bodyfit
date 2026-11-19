@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AGE_GROUPS, BodyFitError } from '../src/lib/bmi.js';
 import { evaluateBMI } from '../src/lib/evaluate.js';
-import { validateInput, parseDecimal } from '../src/lib/validation.js';
+import { normalizeHeight, parseDecimal, sanitizeDecimalInput, validateInput } from '../src/lib/validation.js';
 import { validateTable } from '../src/lib/whoData.js';
 import { loadTableFromDisk, readJSON } from './helpers.js';
 
@@ -144,7 +144,7 @@ describe('validateInput', () => {
 
   it('reports every missing field in Uzbek', () => {
     const e = validateInput({ birthDate: '', sex: '', height: '', weight: '' }, REF);
-    expect(e.birthDate).toBe("Tug'ilgan sanani kiriting.");
+    expect(e.birthDate).toBe("Tug'ilgan sanani tanlang (kun, oy va yil).");
     expect(e.sex).toBe('Jinsni tanlang.');
     expect(e.height).toBe("Bo'yni kiriting.");
     expect(e.weight).toBe('Vaznni kiriting.');
@@ -161,6 +161,8 @@ describe('validateInput', () => {
     expect(validateInput({ ...ok, height: 'abc' }, REF).height).toBeDefined();
     expect(validateInput({ ...ok, height: '-170' }, REF).height).toBeDefined();
     expect(validateInput({ ...ok, height: '29.9' }, REF).height).toBeDefined();
+    expect(validateInput({ ...ok, height: '0.2' }, REF).height).toBeDefined();
+    expect(validateInput({ ...ok, height: '2.7' }, REF).height).toBeDefined();
     expect(validateInput({ ...ok, height: '30' }, REF).height).toBeUndefined();
     expect(validateInput({ ...ok, height: '260' }, REF).height).toBeUndefined();
     expect(validateInput({ ...ok, height: '260.1' }, REF).height).toBeDefined();
@@ -176,5 +178,40 @@ describe('validateInput', () => {
     expect(parseDecimal('7 2')).toBe(72);
     expect(parseDecimal('72kg')).toBeNaN();
     expect(parseDecimal('')).toBeNaN();
+  });
+});
+
+describe('height in metres', () => {
+  it('reads 0,3–2,6 as metres and converts to centimetres', () => {
+    expect(normalizeHeight('1,80')).toEqual({ cm: 180, fromMetres: true });
+    expect(normalizeHeight('1.20')).toEqual({ cm: 120, fromMetres: true });
+    expect(normalizeHeight('2,2')).toEqual({ cm: 220, fromMetres: true });
+    expect(normalizeHeight('1.75').cm).toBe(175);
+    expect(normalizeHeight('0,5')).toEqual({ cm: 50, fromMetres: true });
+  });
+  it('keeps centimetre values as they are', () => {
+    expect(normalizeHeight('180')).toEqual({ cm: 180, fromMetres: false });
+    expect(normalizeHeight('45,5')).toEqual({ cm: 45.5, fromMetres: false });
+  });
+  it('validates metre input as valid height', () => {
+    const ok = { birthDate: '1995-05-05', sex: 'female', weight: '60' };
+    expect(validateInput({ ...ok, height: '1,20' }, REF).height).toBeUndefined();
+    expect(validateInput({ ...ok, height: '1.80' }, REF).height).toBeUndefined();
+  });
+});
+
+describe('sanitizeDecimalInput', () => {
+  it('drops letters and symbols', () => {
+    expect(sanitizeDecimalInput('17a0')).toBe('170');
+    expect(sanitizeDecimalInput('abc')).toBe('');
+    expect(sanitizeDecimalInput('-65kg')).toBe('65');
+    expect(sanitizeDecimalInput('1e3')).toBe('13');
+  });
+  it('keeps a single separator and limits digits', () => {
+    expect(sanitizeDecimalInput('1,8,0')).toBe('1,80');
+    expect(sanitizeDecimalInput('72.555')).toBe('72.55');
+    expect(sanitizeDecimalInput('12345')).toBe('123');
+    expect(sanitizeDecimalInput(',5')).toBe('0,5');
+    expect(sanitizeDecimalInput('65,')).toBe('65,');
   });
 });

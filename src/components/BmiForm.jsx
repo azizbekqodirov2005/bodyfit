@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator, Lock, RotateCcw } from 'lucide-react';
-import { HEIGHT_FROM_DAY, MAX_SUPPORTED_YEARS, calculateAge, parseISODate, todayISO } from '../lib/bmi.js';
-import { validateInput } from '../lib/validation.js';
+import { HEIGHT_FROM_DAY, calculateAge, parseISODate, todayISO } from '../lib/bmi.js';
+import { normalizeHeight, sanitizeDecimalInput, validateInput } from '../lib/validation.js';
+import { formatNumber } from '../lib/i18n.js';
+import DateField from './DateField.jsx';
 
 const EMPTY = { birthDate: '', sex: '', height: '', weight: '', measurement: '' };
-
-function minBirthDate(today) {
-  const [y, m, d] = today.split('-');
-  return `${Number(y) - MAX_SUPPORTED_YEARS + 1}-${m}-${d}`;
-}
 
 export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
   const [values, setValues] = useState(EMPTY);
@@ -34,13 +31,26 @@ export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
     }
   }, [underFive, age, touchedMeasurement]);
 
-  const update = (field) => (e) => {
-    const value = e.target.value;
+  const [heightFocused, setHeightFocused] = useState(false);
+  const [resetCount, setResetCount] = useState(0);
+
+  const setField = (field, value) => {
     setValues((v) => ({ ...v, [field]: value }));
     if (field === 'measurement') setTouchedMeasurement(true);
     if (errors[field]) setErrors((er) => ({ ...er, [field]: undefined }));
     onChange();
   };
+  const update = (field) => (e) => setField(field, e.target.value);
+  const updateNumber = (field) => (e) => setField(field, sanitizeDecimalInput(e.target.value));
+  // Block letters and symbols before they reach the field (paste is cleaned in onChange).
+  const onlyNumberKeys = (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.key.length > 1) return;
+    if (!/[\d.,]/.test(e.key)) e.preventDefault();
+  };
+
+  const heightInfo = normalizeHeight(values.height);
+  const showMetreHint =
+    heightInfo.fromMetres && (/[.,]/.test(values.height) || !heightFocused) && !errors.height;
 
   const submit = (e) => {
     e.preventDefault();
@@ -61,6 +71,7 @@ export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
     setValues(EMPTY);
     setErrors({});
     setTouchedMeasurement(false);
+    setResetCount((n) => n + 1); // remounts the date picker, clearing partial selections
     onReset();
   };
 
@@ -83,16 +94,18 @@ export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
       </div>
 
       <div className="field">
-        <label htmlFor="birthDate">Tug'ilgan sana</label>
-        <input
+        <label htmlFor="birthDate" id="birthDate-label">
+          Tug'ilgan sana
+        </label>
+        <DateField
+          key={resetCount}
           id="birthDate"
-          type="date"
-          ref={(el) => (fieldRefs.current.birthDate = el)}
           value={values.birthDate}
-          min={minBirthDate(today)}
-          max={today}
-          onChange={update('birthDate')}
-          {...a11y('birthDate')}
+          today={today}
+          onChange={(iso) => setField('birthDate', iso)}
+          invalid={Boolean(errors.birthDate)}
+          describedBy={errors.birthDate ? 'birthDate-error' : undefined}
+          firstRef={(el) => (fieldRefs.current.birthDate = el)}
         />
         {err('birthDate')}
       </div>
@@ -158,14 +171,22 @@ export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
               type="text"
               inputMode="decimal"
               autoComplete="off"
-              placeholder="170"
+              placeholder="170 yoki 1,70"
               ref={(el) => (fieldRefs.current.height = el)}
               value={values.height}
-              onChange={update('height')}
+              onChange={updateNumber('height')}
+              onKeyDown={onlyNumberKeys}
+              onFocus={() => setHeightFocused(true)}
+              onBlur={() => setHeightFocused(false)}
               {...a11y('height')}
             />
-            <span aria-hidden="true">sm</span>
+            <span aria-hidden="true">{showMetreHint ? 'm' : 'sm'}</span>
           </div>
+          {showMetreHint && (
+            <p className="field__hint field__hint--ok">
+              {values.height.replace('.', ',')} m → {Number.isInteger(heightInfo.cm) ? heightInfo.cm : formatNumber(heightInfo.cm, 1)} sm sifatida hisoblanadi
+            </p>
+          )}
           {err('height')}
         </div>
         <div className="field">
@@ -176,10 +197,11 @@ export default function BmiForm({ onSubmit, onChange, onReset, busy }) {
               type="text"
               inputMode="decimal"
               autoComplete="off"
-              placeholder="65,5"
+              placeholder="65"
               ref={(el) => (fieldRefs.current.weight = el)}
               value={values.weight}
-              onChange={update('weight')}
+              onChange={updateNumber('weight')}
+              onKeyDown={onlyNumberKeys}
               {...a11y('weight')}
             />
             <span aria-hidden="true">kg</span>
