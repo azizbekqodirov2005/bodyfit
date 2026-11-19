@@ -106,20 +106,28 @@ export default function App() {
         <div className="container footer__inner">
           <div className="footer__brand">
             <span>Ishlab chiquvchi</span>
-            <img
-              className="footer__logo footer__logo--light"
-              src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-light-theme.png`}
-              alt="AzbekDev — Software Solutions"
-              width="161"
-              height="40"
-            />
-            <img
-              className="footer__logo footer__logo--dark"
-              src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-dark-theme.png`}
-              alt="AzbekDev — Software Solutions"
-              width="161"
-              height="40"
-            />
+            <a
+              className="footer__logo-link"
+              href="https://t.me/azbekdev"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="AzbekDev Telegram kanali"
+            >
+              <img
+                className="footer__logo footer__logo--light"
+                src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-light-theme.png`}
+                alt="AzbekDev — Software Solutions"
+                width="161"
+                height="40"
+              />
+              <img
+                className="footer__logo footer__logo--dark"
+                src={`${import.meta.env.BASE_URL}brand/azbekdev-logo-dark-theme.png`}
+                alt="AzbekDev — Software Solutions"
+                width="161"
+                height="40"
+              />
+            </a>
           </div>
           <p>
             <strong>Tibbiy ogohlantirish.</strong> BodyFit skrining vositasi bo'lib, tibbiy tashxis qo'ymaydi va davolanish
